@@ -100,14 +100,14 @@ class My_Network(nn.Module):
         vid_aud_distance_ = torch.sqrt(torch.sum(vid_aud_distance_, dim=1))  # batch x 784
 
         if self.with_attention:
-            img_emb = self.img_emb_layer(vid_out)  # batch x 32 x 15 x 28 x 28 or batch x 32 x 15 (if fine_grained = temporal)
+            img_emb = self.img_emb_layer(vid_out)  # batch x 32 x 15 x 28 x 28
             aud_emb = self.aud_emb_layer(aud_out.view(aud_out.shape[0], aud_out.shape[1], aud_out.shape[2]))  # batch x 32 x 15
 
             atts = []
             for i_emb, a_emb in zip(img_emb, aud_emb):
                 atts.append(torch.tensordot(i_emb, a_emb, dims=([0, 1],[0, 1])))  # each, 28 x 28
 
-            att = torch.stack(atts)  # batch x 28 x 28 or batch x 15 (temporal) or batch x 15 x 28 x 28 (spatio_temporal)
+            att = torch.stack(atts)  # batch x 28 x 28 
             att = att / (32 * 15)  # normalize with the C and T size
 
             att = att.view(att.shape[0], -1)  # batch x 784

@@ -130,63 +130,6 @@ class deepfake_3d_rawaudio(data.Dataset):
 
         return fake_len, start_pos, end_pos
 
-    def _repeat_and_skip_pseudo_fake(self, data, fake_len, start_pos, end_pos, numrepeat_min=2, numrepeat_max=2):
-        # For example, real data: I1, I2, I3, I4, I5, I6, I7, I8. Pseudo fake from I3 to I6.
-        # repeat and skip.  --> I1, I2, I3, I3, I5, I5, I7, I8. (type_0_numrepeat = [2])
-        if numrepeat_max == -1:
-            numrepeat_max = fake_len
-
-        numrepeat = min(fake_len, random.randint(numrepeat_min, numrepeat_max))
-        num_segments = math.ceil(fake_len / numrepeat)
-        original_data = copy.deepcopy(data)
-
-        for ns in range(num_segments):
-            start_i = start_pos + ns * numrepeat
-            end_i = min(start_pos + fake_len, start_i + numrepeat)
-            j = 0
-            for i in range(start_i, end_i):
-                data[i] = original_data[start_i]
-                # print('replacing data ', i, ' with data ', start_i)
-                j += 1
-                
-        return data
-
-    def _backward_or_flip_pseudo_fake(self, data, fake_len, start_pos, end_pos, everynframes_min=2, everynframes_max=2):
-        # For example, real data: I1, I2, I3, I4, I5, I6, I7, I8. Pseudo fake from I3 to I6.
-        # backward when everynframes = fake_len. --> I1, I2, I6, I5, I4, I3, I7, I8.
-        # backward when everynframes = 2. --> I1, I2, I4, I3, I6, I5, I7, I8.
-        if everynframes_max == -1:
-            everynframes_max = fake_len
-        everynframes = min(fake_len, random.randint(everynframes_min, everynframes_max))
-        original_data = copy.deepcopy(data)
-
-        num_flips = math.ceil(fake_len / everynframes)
-
-        for nf in range(num_flips):
-            start_i = start_pos + nf * everynframes
-            end_i = min(start_pos + fake_len, start_i + everynframes)
-
-            j = 0
-            for i in range(start_i, end_i):
-                data[i] = original_data[end_i-j-1]
-                # print('replacing data ', i, ' with data ', end_i-j-1)
-                j += 1
-
-        return data
-
-    def _random_pseudo_fake(self, data, fake_len, start_pos, end_pos):
-        # For example, real data: I1, I2, I3, I4, I5, I6, I7, I8. Pseudo fake from I3 to I6.
-        # random order --> I1, I2, I4, I3, I5, I6, I7, I8. Make sure I4, I3, I5, I6 != I3, I4, I5, I6
-        index_list = [i for i in range(start_pos, end_pos)]
-        ori_list = copy.deepcopy(index_list)
-        original_data = copy.deepcopy(data)
-
-        while ori_list == index_list:
-            random.shuffle(index_list)
-
-        data[start_pos:end_pos] = original_data[index_list]
-        return data
-
     def _replace_with_other(self, data, fake_len, start_pos, end_pos, other_data):
         # For example, real data: I1, I2, I3, I4, I5, I6, I7, I8. Pseudo fake from I3 to I6.
         # random order --> I1, I2, J3, J4, J5, J6, I7, I8. Where J is from other clip
@@ -194,43 +137,6 @@ class deepfake_3d_rawaudio(data.Dataset):
         data[start_pos:end_pos] = other_data[start_pos:end_pos]
         return data
 
-    def _translate_pseudo_fake(self, data, fake_len, start_pos, end_pos, direction='left', padding='repeat', translate_min=1, translate_max=1):
-        # For example, real data: I1, I2, I3, I4, I5, I6, I7, I8. Pseudo fake from I3 to I6. With translate = 1 and left
-        assert direction in ['left', 'right']
-        assert padding in ['repeat', 'mirror'] # repeat:  I1, I2, I4, I5, I6, I6, I7, I8; mirror:  I1, I2, I4, I5, I6, I5, I7, I8;
-        original_data = copy.deepcopy(data)
-        if translate_max == -1:
-            translate_max = fake_len
-        translate = min(fake_len-1, random.randint(translate_min, translate_max))
-        # print('start pos: ', start_pos, ' ; end_pos: ', end_pos, ' ; fake len: ', fake_len)
-
-        if direction == 'left':
-            for i in range(start_pos, end_pos-translate):
-                # print('replacing data ', i, ' with data ', i+translate)
-                data[i] = original_data[max(0, min(i+translate, len(original_data)-1))]
-            j=0
-            for i in range(end_pos-translate, end_pos):  # padding
-                j+=1
-                if padding == 'repeat':
-                    # print('padding repeat: replacing data ', i, ' with data ', end_pos-1)
-                    data[i] = original_data[max(0, min(end_pos-1, len(original_data)-1))]
-                else: # elif padding == 'mirror':
-                    # print('padding mirror: replacing data ', i, ' with data ', end_pos-translate-j+1)
-                    data[i] = original_data[max(0, min(end_pos-translate-j+1, len(original_data)-1))]
-        else:  # elif direction == 'right'
-            for i in range(start_pos + translate, end_pos):
-                data[i] = original_data[max(0, min(i-translate, len(original_data)-1))]
-                # print('replacing data ', i, ' with data ', i-translate)
-            j=0
-            for i in range(start_pos, start_pos+translate):  # padding
-                if padding == 'repeat':
-                    data[i] = original_data[max(0, min(start_pos, len(original_data)-1))]
-                    # print('padding repeat: replacing data ', i, ' with data ', start_pos)
-                else: # elif padding == 'mirror':
-                    data[i] = original_data[max(0, min(start_pos + translate - j, len(original_data)-1))]
-                    # print('padding repeat: replacing data ', i, ' with data ', start_pos + translate - j)
-                j+=1
-        return data
     def _augment_pseudo_fake(self, data, time_len,
                              minimum_fake_length=2, maximum_fake_length=-1,
                              other_data=None):

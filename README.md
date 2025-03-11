@@ -69,7 +69,7 @@ See the results in the `output.txt` inside `test_results/v5_mydf-natt1.0-upf-PF0
 # Reference
 If you use the code, please cite the paper -
 ```
-@InProceedings{astrid2024statistics,
+@InProceedings{astrid2024detecting,
   author       = "Astrid, Marcella and Ghorbel, Enjie and Aouada, Djamila",
   title        = "Detecting Audio-Visual Deepfakes with Fine-Grained Inconsistencies",
   booktitle    = "British Machine Vision Conference (BMVC)",
